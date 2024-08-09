@@ -146,7 +146,7 @@ class markdown_table:  # noqa: N801
 
     def __validate_parameters(self): # noqa: C901
         valid_values = {
-            "row_sep": ["always", "topbottom", "markdown", None],
+            "row_sep": ["always", "topbottom", "markdown", "pandoc_multiline", None],
             "emoji_spacing": ["mono", None],
             "multiline_strategy": ["rows", "header", "rows_and_header"]
         }
@@ -286,6 +286,9 @@ class markdown_table:  # noqa: N801
 
     def __get_normal_row(self, item):
         row = ""
+        row_sep = "|"
+        if self.row_sep == "pandoc_multiline":
+            row_sep = " "
         for key in self.data[0].keys():
             # preprend emoji pre-processing for cell values
             emoji = []
@@ -296,10 +299,10 @@ class markdown_table:  # noqa: N801
             local_padding = self.var_padding[key] - len(emoji)
             margin = local_padding - len(str(item[key]))
             right = self.__get_margin(margin, key)
-            row += "|" + str(item[key]).rjust(
+            row += row_sep + str(item[key]).rjust(
                 local_padding - right, self.padding_char
             ).ljust(local_padding, self.padding_char)
-        row += "|"
+        row += row_sep
         return row
 
     def __get_multiline_row(self, item):
@@ -364,6 +367,8 @@ class markdown_table:  # noqa: N801
         header = ""
         if self.row_sep in ["topbottom", "always"]:
             header += self.newline_char + self.var_row_sep_last + self.newline_char
+        if self.row_sep == "pandoc_multiline":
+            header += self.newline_char + self.var_row_sep_last.replace("+", "-") + self.newline_char
 
         # if header is set to be multirow
         if self.multiline and self.multiline_strategy in ["header", "rows_and_header"]:
@@ -385,6 +390,10 @@ class markdown_table:  # noqa: N801
             header += self.var_row_sep + self.newline_char
         if self.row_sep == "markdown":
             header += self.var_row_sep.replace("+", "|") + self.newline_char
+        if self.row_sep == "pandoc_multiline":
+            last_line = self.var_row_sep.replace("+", " ")
+            last_line = "-" + last_line[1:-1] + "-"
+            header += last_line + self.newline_char
         return header
 
     def get_body(self):
@@ -394,10 +403,14 @@ class markdown_table:  # noqa: N801
             rows += self.__get_row(item)
             if i < len(self.data) - 1:
                 rows += self.newline_char
+                if self.row_sep == "pandoc_multiline":
+                    rows += self.newline_char
             if self.row_sep == "always" and i < len(self.data) - 1:
                 rows += self.var_row_sep + self.newline_char
             if self.row_sep in ["topbottom", "always"] and i == len(self.data) - 1:
                 rows += self.newline_char + self.var_row_sep_last
+        if self.row_sep == "pandoc_multiline":
+            rows += self.newline_char + self.var_row_sep_last.replace("+", "-")
         return rows
 
     def get_markdown(self):
